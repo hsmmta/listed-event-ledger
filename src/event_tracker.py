@@ -5,7 +5,7 @@ from pathlib import Path
 import sqlite3
 from app.preview import report
 from src.ingest.materials import ingest
-from src.common.storage import DDL, records, stamp
+from src.common.storage import initialize, records, stamp
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -21,7 +21,7 @@ def main():
     args=parser.parse_args()
     args.db.parent.mkdir(parents=True, exist_ok=True)
     with sqlite3.connect(args.db) as db:
-        db.executescript(DDL)
+        initialize(db)
         if args.action=="import":
             payload=json.loads(args.file.read_text(encoding="utf-8-sig"))
             counts,errors=ingest(db,payload.get("材料") if isinstance(payload,dict) else payload)

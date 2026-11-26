@@ -11,7 +11,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 from app.preview import report
-from src.common.storage import DDL, records, stamp
+from src.common.storage import initialize, records, stamp
 from src.ingest.materials import ingest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -34,7 +34,7 @@ def controls(token, cutoff, notice):
 def make_server(db_path, port=0):
     db_path.parent.mkdir(parents=True, exist_ok=True)
     with closing(sqlite3.connect(db_path)) as db:
-        db.executescript(DDL)
+        initialize(db)
     token = secrets.token_urlsafe(32)
 
     class Handler(BaseHTTPRequestHandler):

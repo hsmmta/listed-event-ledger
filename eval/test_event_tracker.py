@@ -11,7 +11,7 @@ class ContractCases(unittest.TestCase):
     def setUp(self):
         self.db=sqlite3.connect(":memory:")
         self.addCleanup(self.db.close)
-        self.db.executescript(e.DDL)
+        e.initialize(self.db)
         self.initial=sample("D1-D5.json")
         self.extra=sample("D6-D8.json")
         e.ingest(self.db,self.initial+self.extra)
