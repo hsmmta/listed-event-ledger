@@ -27,6 +27,8 @@ python eval/run_eval.py
 - `data/interim/` 是可由输入重建的 SQLite 工作库。`data/processed/` 是结构化抽取结果。`data/groundtruth/` 放逐条人工标注，手工维护。
 - `src/ingest/` 导入、去重，`src/extract/` 合同抽取，`src/common/` 存储和时间处理。`src/link/`、`src/verify/` 预留给归并、核验。`app/` 生成预览。
 - `eval/cases/` 只放题目，`eval/expected/` 放按题号关联的答案。`eval/reports/` 保存每次运行报告。当前 5 项自动检查为开发回归，独立评测尚待开展。
-- `out/` 保存页面和展示产物。`notebooks/` 放探索性试验。`archive/` 保存历史资料。
+- `out/` 保存页面和展示产物。`archive/` 保存历史资料。
 
 Git 跟踪公开虚构输入、代码、文档、虚构样例快照与回归记录。原始材料、人工标注、数据库、一般导出、本地聊天归档与环境密钥默认忽略。
+
+目录调整原则、中文提交格式和阶段版本号见 [项目协作约定](AGENTS.md)。
