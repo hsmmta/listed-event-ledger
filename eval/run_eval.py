@@ -11,7 +11,7 @@ sys.path.insert(0, str(ROOT))
 
 if __name__ == "__main__":
     log = io.StringIO()
-    suite = unittest.defaultTestLoader.loadTestsFromName("eval.test_event_tracker")
+    suite = unittest.defaultTestLoader.discover(str(ROOT / "eval"), pattern="test_*.py", top_level_dir=str(ROOT))
     result = unittest.TextTestRunner(stream=log, verbosity=2).run(suite)
     now = datetime.now(timezone.utc)
     report = {"运行时间UTC": now.isoformat(), "范围":"公开虚构材料规则回归。业务问答题另行人工核对。",

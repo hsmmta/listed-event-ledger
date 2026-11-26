@@ -1,0 +1,8 @@
+{
+  "运行时间UTC": "2026-11-26T08:21:26.148499+00:00",
+  "范围": "公开虚构材料规则回归。业务问答题另行人工核对。",
+  "用例数": 6,
+  "失败": 0,
+  "错误": 0,
+  "详情": "test_as_of (eval.test_event_tracker.ContractCases.test_as_of) ... ok\ntest_project_and_amount (eval.test_event_tracker.ContractCases.test_project_and_amount) ... ok\ntest_reprints_and_statement (eval.test_event_tracker.ContractCases.test_reprints_and_statement) ... ok\ntest_retry_and_conflict (eval.test_event_tracker.ContractCases.test_retry_and_conflict) ... ok\ntest_unseen_and_denial (eval.test_event_tracker.ContractCases.test_unseen_and_denial) ... ok\ntest_import_replay_and_restart (eval.test_workbench.WorkbenchTest.test_import_replay_and_restart) ... ok\n\n----------------------------------------------------------------------\nRan 6 tests in 0.404s\n\nOK\n"
+}
