@@ -1,5 +1,7 @@
 import re
 
+SIGNING_TOPIC = re.compile(r"(?:签署|签订)(?:情况|事宜|进展)")
+
 def extract(source, body):
     # 每个范围都来自原始字符串，方便定位；规则只覆盖合同语料。
     company = re.match(r"(.+公司)公告$", source)
@@ -24,13 +26,15 @@ def extract(source, body):
     for sent in re.finditer(r"[^。！？；\n]+[。！？；]?", body):
         quote = sent.group()
         actions = []
+        # 标题中的“签署情况”等词组不陈述动作；引句仍使用未经改写的正文。
+        action_text = SIGNING_TOPIC.sub("，", quote)
         if "候选人" in quote:
             actions.append("候选")
-        if re.search(r"(?:尚未|未曾|并未|没有|未)(?:正式)?(?:签订|签署|签约)", quote):
+        if re.search(r"(?:尚未|未曾|并未|没有|未)(?:正式)?(?:签订|签署|签约)", action_text):
             actions.append("尚未签约")
-        elif re.search(r"(?:拟|预计|计划|有望|拟于|将)[^，。；]{0,24}(?:签订|签署|签约)", quote):
+        elif re.search(r"(?:拟|预计|计划|有望|拟于|将)[^，。；]{0,24}(?:签订|签署|签约)", action_text):
             actions.append("拟签约")
-        elif re.search(r"签订|签署|已签约", quote):
+        elif re.search(r"签订|签署|已签约", action_text):
             actions.append("称已签约")
         if re.search(r"否认|不实|误传|撤回|撤稿|更正", quote):
             actions = ["否认或更正（待核范围）"]

@@ -59,6 +59,7 @@ def report(rows, cutoff, controls=""):
             parts.append("<p>最近公告所述（"+escape(last["编号"])+"）："+escape("、".join(dict.fromkeys(c["动作"] for c in last["说法"])))+"</p>")
         else:
             parts.append("<p>当前可见材料中仅有报道或转述。</p>")
+        parts.append("<h3>披露时间线</h3>")
         parts.extend(entry(r) for r in events)
         parts.append("</section>")
     if pending:

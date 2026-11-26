@@ -1,6 +1,8 @@
 from datetime import datetime
 import json
 
+from src.extract.contracts import SIGNING_TOPIC, extract
+
 
 DDL = """
 CREATE TABLE IF NOT EXISTS documents(
@@ -32,16 +34,26 @@ def link_document(db, document_id, result):
 
 def initialize(db):
     db.executescript(DDL)
-    if db.execute("PRAGMA user_version").fetchone()[0] == 0:
-        with db:
-            db.execute("BEGIN IMMEDIATE")
-            if db.execute("PRAGMA user_version").fetchone()[0] == 0:
-                old_rows = db.execute(
-                    "SELECT id, result FROM documents LEFT JOIN document_matters ON document_id=id "
-                    "WHERE document_id IS NULL ORDER BY published, id")
-                for document_id, result in old_rows.fetchall():
-                    link_document(db, document_id, json.loads(result))
-                db.execute("PRAGMA user_version = 1")
+    if db.execute("PRAGMA user_version").fetchone()[0] >= 2:
+        return
+    with db:
+        db.execute("BEGIN IMMEDIATE")
+        version = db.execute("PRAGMA user_version").fetchone()[0]
+        if version >= 2:
+            return
+        rows = db.execute("SELECT id, source, body, result FROM documents ORDER BY published, id")
+        for document_id, source, body, stored in rows:
+            if SIGNING_TOPIC.search(body):
+                result = extract(source, body)
+                db.execute("UPDATE documents SET result=? WHERE id=?",
+                           (json.dumps(result, ensure_ascii=False), document_id))
+                db.execute("DELETE FROM document_matters WHERE document_id=?", (document_id,))
+            elif version == 0:
+                result = json.loads(stored)
+            else:
+                continue
+            link_document(db, document_id, result)
+        db.execute("PRAGMA user_version = 2")
 
 
 def records(db, until):
