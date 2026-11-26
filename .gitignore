@@ -18,3 +18,5 @@ out/*
 !out/11月4日-历史截面.html
 .venv/
 *.tmp
+/docs/
+/doc/
