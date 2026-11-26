@@ -17,6 +17,12 @@ from src.ingest.materials import ingest
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DB = ROOT / "data" / "interim" / "事件资料.sqlite3"
 
+EXAMPLES = {
+    "/examples": ("D1-D5.json", "D6-D8.json"),
+    "/link-examples": ("B01-B08.json",),
+}
+
+
 def controls(token, cutoff, notice):
     secret = f'<input type="hidden" name="token" value="{token}">'
     return f"""
@@ -29,7 +35,8 @@ def controls(token, cutoff, notice):
 <label>发布来源 <input name="来源" required></label><label>正文 <textarea rows="4" name="正文" required></textarea></label>
 <button>导入并查看最新时间线</button></form></details>
 <details><summary>使用虚构样例</summary><form method="post" action="/examples">{secret}
-<button>导入八份公开示例</button></form></details>"""
+<button>导入八份公开示例</button></form>
+<form method="post" action="/link-examples">{secret}<button>导入多合同归并示例</button></form></details>"""
 
 def make_server(db_path, port=0):
     db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -67,7 +74,7 @@ def make_server(db_path, port=0):
             self.wfile.write(data)
 
         def do_POST(self):
-            if self.path not in ("/import","/examples"):
+            if self.path != "/import" and self.path not in EXAMPLES:
                 return self.send_error(404)
             try:
                 size = int(self.headers.get("Content-Length","0"))
@@ -78,9 +85,9 @@ def make_server(db_path, port=0):
             form = parse_qs(self.rfile.read(size).decode("utf-8", "replace"))
             if form.get("token") != [token]:
                 return self.send_error(403)
-            if self.path == "/examples":
+            if self.path in EXAMPLES:
                 rows = []
-                for name in ("D1-D5.json","D6-D8.json"):
+                for name in EXAMPLES[self.path]:
                     rows.extend(json.loads((ROOT/"data"/"examples"/name).read_text(encoding="utf-8-sig"))["材料"])
             else:
                 row = {k: form.get(k, [""])[0] for k in ("编号","发布时间","来源","正文")}

@@ -18,6 +18,7 @@ out/*
 !out/11月4日-历史截面.html
 !out/V1-雨水回用-披露前.html
 !out/V1-雨水回用-披露时.html
+!out/V2.1-合同归并与复核.html
 .venv/
 *.tmp
 /docs/

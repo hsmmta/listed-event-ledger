@@ -1,4 +1,4 @@
-from collections import Counter
+from collections import Counter, defaultdict
 from html import escape
 from src.link.timeline import timelines
 
@@ -12,7 +12,11 @@ blockquote{border-left:3px solid #32786f;margin:.4rem 0;padding:0 1rem}
 summary,button{cursor:pointer}label{display:block;margin:.5rem 0}
 input,textarea,button{font:inherit;padding:.3rem}textarea{width:95%}
 """
-def entry(row):
+def quote_anchor(doc, start, end):
+    return f"quote-{doc.encode('utf-8').hex()}-{start}-{end}"
+
+
+def entry(row, source_spans, candidate_ids):
     esc = escape
     info = " · ".join(row[k] for k in ("发布时间","编号","来源","材料性质"))
     parts = ["<article><small>" + esc(info) + "</small>"]
@@ -21,13 +25,24 @@ def entry(row):
     if row["待复核"]:
         parts.append("<p>待复核：" + esc("、".join(row["待复核"])) + "</p>")
     body = row["正文"]
-    spans = {}
-    document_token = row["编号"].encode("utf-8").hex()
+    spans = dict(source_spans[row["编号"]])
+    if row["归并依据"]:
+        parts.append("<p>归并依据：" + esc(row["归并依据"]) + "</p>")
+    if row["候选合同编号"]:
+        links = []
+        for code in row["候选合同编号"]:
+            target = candidate_ids[row["公司"], row["对手"], code]
+            links.append(f'<a href="#matter-{target}">{esc(code)}</a>')
+        parts.append("<p>候选合同：" + "、".join(links) + "</p>")
+    for ref in row["归并证据"]:
+        anchor = quote_anchor(ref["材料"], ref["起点"], ref["终点"])
+        label = " · ".join(ref[k] for k in ("材料", "来源", "发布时间"))
+        parts.append(f'<p><a href="#{anchor}">{esc(label)}</a>　{esc(ref["引句"])}</p>')
     for claim in row["说法"]:
         parts.append("<strong>"+esc(claim["动作"])+"</strong><blockquote>"+esc(claim["原句"])+"</blockquote>")
         start, end = claim["起点"], claim["终点"]
         if 0 <= start < end <= len(body) and body[start:end] == claim["原句"]:
-            anchor = f"quote-{document_token}-{start}-{end}"
+            anchor = quote_anchor(row["编号"], start, end)
             spans[start, end] = anchor
             parts.append(f'<a href="#{anchor}">定位原文（第 {start + 1} 至 {end} 字）</a>')
     for amount in row["金额"]:
@@ -45,10 +60,21 @@ def report(rows, cutoff, controls=""):
     groups, pending = timelines(rows)
     parts = ["<!doctype html><html lang='zh-CN'><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>合同事项追踪</title><style>"+STYLE+"</style><h1>合同事项追踪</h1>", controls,
              f"<p>披露截至 {escape(cutoff or '库内最新')} · {len(rows)} 份材料 · {len(groups)} 组事项候选 · {len(pending)} 份待复核</p>"]
+    source_spans = defaultdict(dict)
+    candidate_ids = {}
+    for row in rows:
+        for ref in row["归并证据"]:
+            start, end = ref["起点"], ref["终点"]
+            source_spans[ref["材料"]][start, end] = quote_anchor(ref["材料"], start, end)
+        if row["合同编号"] and row["事项编号"]:
+            candidate_ids[row["公司"], row["对手"], row["合同编号"]] = row["事项编号"]
+    if pending:
+        parts.append('<a href="#review">查看待复核材料</a>')
     for matter_id, events in groups:
         first = events[0]
         company, party, project = first["公司"], first["对手"], first["项目"]
-        parts.append("<section><h2>"+escape(project)+"</h2><p>"+escape(matter_id+" · "+company+" · "+party)+f" · {len(events)} 份材料</p>")
+        title = f'{project} · 合同 {first["合同编号"]}' if first["合同编号"] else project
+        parts.append(f'<section id="matter-{escape(matter_id)}"><h2>'+escape(title)+"</h2><p>"+escape(matter_id+" · "+company+" · "+party)+f" · {len(events)} 份材料</p>")
         citations = Counter(r["引述来源"] for r in events if r["引述来源"])
         for source, count in citations.items():
             if count > 1:
@@ -60,10 +86,10 @@ def report(rows, cutoff, controls=""):
         else:
             parts.append("<p>当前可见材料中仅有报道或转述。</p>")
         parts.append("<h3>披露时间线</h3>")
-        parts.extend(entry(r) for r in events)
+        parts.extend(entry(r, source_spans, candidate_ids) for r in events)
         parts.append("</section>")
     if pending:
-        parts.append("<section><h2>待复核材料</h2>")
-        parts.extend(entry(r) for r in pending)
+        parts.append('<section id="review"><h2>待复核材料</h2>')
+        parts.extend(entry(r, source_spans, candidate_ids) for r in pending)
         parts.append("</section>")
     return "\n".join(parts)+"</html>"

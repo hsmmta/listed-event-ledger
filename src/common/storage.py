@@ -1,6 +1,7 @@
 from datetime import datetime
 import json
 
+from src.link.resolve import resolve
 from src.extract.contracts import SIGNING_TOPIC, extract
 
 
@@ -62,6 +63,7 @@ def records(db, until):
         FROM documents LEFT JOIN document_matters ON documents.id = document_matters.document_id
         WHERE published <= ? ORDER BY published, id
     """
-    return [{"编号": k, "发布时间": t, "来源": s, "正文": b, **json.loads(result),
+    rows = [{"编号": k, "发布时间": t, "来源": s, "正文": b, **json.loads(result),
              "事项编号": f"HT-{matter_id:04d}" if matter_id is not None else None}
             for k, t, s, b, result, matter_id in db.execute(query, (until or "9999",))]
+    return resolve(rows)

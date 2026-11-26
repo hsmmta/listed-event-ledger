@@ -40,6 +40,16 @@ class WorkbenchTest(unittest.TestCase):
                     self.assertNotIn("光纤改造",past)
                     self.assertIn("800万元",past)
                     self.assertIn("最近公告所述（D3）",past)
+                    linked = read("/link-examples", {"token": token})
+                    self.assertIn("新增 8", linked)
+                    self.assertIn('href="#review"', linked)
+                    self.assertIn('>HT-02</a>', linked)
+                    self.assertIn('北港仓储 · 合同 HT-02', linked)
+                    self.assertIn('归并依据', linked)
+                    for fragment in re.findall(r'href="#([^"]+)"', linked):
+                        self.assertEqual(linked.count(f'id="{fragment}"'), 1, fragment)
+                    cutoff = read("/?" + urlencode({"until": "2026-11-11T23:59"}))
+                    self.assertNotIn("HT-02", cutoff)
                 finally:
                     server.shutdown()
                     thread.join()
