@@ -22,6 +22,8 @@ out/*
 !out/V2.2-二阶段定版验收.html
 !out/V3.0-合同澄清与更正.html
 !out/V3.1-合同与业绩核验.html
+!out/V4.1-渚江公司-更正前.html
+!out/V4.1-渚江公司-更正后.html
 .venv/
 *.tmp
 /docs/

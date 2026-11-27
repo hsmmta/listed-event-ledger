@@ -8,7 +8,9 @@ from contextlib import closing
 from html import escape
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlencode, urlsplit
+from urllib.parse import parse_qs, quote, urlencode, urlsplit
+
+from app.brief import brief, brief_form
 
 from app.preview import report, review_anchor
 from src.common.storage import initialize, records, stamp
@@ -61,6 +63,8 @@ def make_server(db_path, port=0):
 
         def do_GET(self):
             url = urlsplit(self.path)
+            if url.path == "/brief":
+                return self.show_brief(parse_qs(url.query))
             if url.path != "/":
                 return self.send_error(404)
             query = parse_qs(url.query)
@@ -71,9 +75,28 @@ def make_server(db_path, port=0):
                 return self.send_error(400, "Invalid date")
             with closing(sqlite3.connect(db_path)) as db:
                 rows = records(db, cutoff)
-            data = report(rows, cutoff, controls(token, cutoff, query.get("notice", [""])[0]),
+            data = report(rows, cutoff, controls(token, cutoff, query.get("notice", [""])[0]) + brief_form(rows, cutoff),
                           review_token=None if cutoff else token).encode()
-            self.send_response(200)
+            self.html_response(data)
+
+        def show_brief(self, query):
+            company = query.get("company", [""])[0].strip()
+            try:
+                start, end = (stamp(query[key][0].replace("T", " ")) for key in ("start", "end"))
+                if not company or start > end:
+                    raise ValueError
+            except (KeyError, ValueError):
+                return self.html_response("<p>请选择公司及有效时点，比较起点须早于或等于截至时点。</p>".encode(), 400)
+            with closing(sqlite3.connect(db_path)) as db:
+                db.execute("BEGIN")
+                data = brief(db, company, start, end).encode()
+            name = f"{company}-研究简报-{end[:10]}.html" if query.get("download") == ["1"] else ""
+            self.html_response(data, filename=name)
+
+        def html_response(self, data, status=200, filename=""):
+            self.send_response(status)
+            if filename:
+                self.send_header("Content-Disposition", "attachment; filename*=UTF-8''" + quote(filename, safe=""))
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(data)))
             self.send_header("Cache-Control", "no-store")

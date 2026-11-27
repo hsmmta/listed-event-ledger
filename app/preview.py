@@ -115,7 +115,7 @@ def report(rows, cutoff, controls="", review_token=None):
     review_summary = f"{len(pending)} 份待复核"
     if tasks:
         remaining = sum(not row["金额复核"]["记录"] for row in tasks)
-        review_summary = f"{len(pending)} 份归属待复核 · {remaining} 条金额待处理"
+        review_summary = f"{len(pending)} 份归属待复核 · <a href='#amount-tasks'>{remaining} 条金额待处理</a>"
     parts = ["<!doctype html><html lang='zh-CN'><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>上市公司事项追踪</title><style>"+STYLE+"</style><h1>上市公司事项追踪</h1>", controls,
              f"<p>披露截至 {escape(cutoff or '库内最新')} · {len(rows)} 份材料 · {len(groups)} 组事项候选 · {review_summary}</p>"]
     source_spans = defaultdict(dict)
@@ -127,7 +127,7 @@ def report(rows, cutoff, controls="", review_token=None):
         if row["合同编号"] and row["事项编号"]:
             candidate_ids[row["公司"], row["对手"], row["合同编号"]] = row["事项编号"]
     if tasks:
-        parts.append("<nav aria-label='金额复核任务'><h2>合同金额复核任务</h2><ul>")
+        parts.append("<nav id='amount-tasks' aria-label='金额复核任务'><h2>合同金额复核任务</h2><ul>")
         for row in sorted(tasks, key=lambda r: bool(r["金额复核"]["记录"])):
             status = "已复核" if row["金额复核"]["记录"] else "待处理"
             label = " · ".join([row["公司"] or row["来源"], row["项目"], row["编号"], status])

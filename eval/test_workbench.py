@@ -61,6 +61,14 @@ class WorkbenchTest(unittest.TestCase):
                     historical = read("/?" + urlencode({"until": "2026-11-22T16:00"}))
                     self.assertNotIn("测试研究员", historical)
                     self.assertNotIn('action="/amount-review"', historical)
+                    self.assertIn('action="/brief"', saved)
+                    params = dict(company="清浦公司", start="2026-11-22T15:59", end="2099-01-01T00:00")
+                    preview = read("/brief?" + urlencode(params))
+                    self.assertIn("研究者修正抽取", preview)
+                    self.assertIn("680万元 → 608万元", preview)
+                    with urlopen(url + "/brief?" + urlencode(dict(params, download="1"))) as response:
+                        self.assertIn("attachment", response.headers["Content-Disposition"])
+                        self.assertEqual(response.read().decode(), preview)
                 finally:
                     server.shutdown()
                     thread.join()
