@@ -19,6 +19,7 @@ out/*
 !out/V1-雨水回用-披露前.html
 !out/V1-雨水回用-披露时.html
 !out/V2.1-合同归并与复核.html
+!out/V2.2-二阶段定版验收.html
 .venv/
 *.tmp
 /docs/
