@@ -20,6 +20,7 @@ from src.verify.amount_review import DEFAULT_DB, correct_amount
 ROOT = Path(__file__).resolve().parents[1]
 
 EXAMPLES = {
+    "/trial-examples": ("F01-F03.json",),
     "/review-example": ("R01-金额复核.json",),
     "/examples": ("D1-D5.json", "D6-D8.json"),
     "/stage-three": ("来源与业绩.json", "E01-E05.json"),
@@ -41,6 +42,7 @@ def controls(token, cutoff, notice):
 <button>导入并查看最新时间线</button></form></details>
 <details><summary>使用虚构样例</summary><form method="post" action="/examples">{secret}
 <button>导入八份公开示例</button></form>
+<form method="post" action="/trial-examples">{secret}<button>导入第四阶段试用示例</button></form>
 <form method="post" action="/review-example">{secret}<button>导入人工金额复核示例</button></form>
 <form method="post" action="/link-examples">{secret}<button>导入多合同归并示例</button></form>
 <form method="post" action="/evidence-examples">{secret}<button>导入澄清与金额更正示例</button></form>

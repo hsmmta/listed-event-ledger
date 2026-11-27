@@ -24,6 +24,7 @@ out/*
 !out/V3.1-合同与业绩核验.html
 !out/V4.1-渚江公司-更正前.html
 !out/V4.1-渚江公司-更正后.html
+!out/V4.2-松岚公司-人工复核简报.html
 .venv/
 *.tmp
 /docs/

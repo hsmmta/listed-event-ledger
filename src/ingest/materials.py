@@ -7,17 +7,26 @@ from src.extract.earnings import extract_earnings
 
 REQUIRED = ("编号", "发布时间", "来源", "正文")
 
-def ingest(db, rows):
+def ingest(db, rows, *, only=None):
     if not isinstance(rows, list):
         raise ValueError("需要材料数组，或含“材料”数组的对象")
+    if only is not None and not 1 <= only <= len(rows):
+        raise ValueError(f"重试序号 {only} 超出范围，批次共有 {len(rows)} 项")
     counts = dict.fromkeys(["新增","重复","失败"],0)
     errors = []
-    for i,row in enumerate(rows,1):
+    selected = enumerate(rows, 1) if only is None else [(only, rows[only - 1])]
+    for i, row in selected:
         try:
-            if not isinstance(row,dict) or any(not isinstance(row.get(k),str) or not row[k].strip() for k in REQUIRED):
-                raise ValueError("编号、发布时间、来源、正文均须为非空文本")
+            if not isinstance(row, dict):
+                raise ValueError("该项应为包含材料字段的对象")
+            missing = [k for k in REQUIRED if not isinstance(row.get(k), str) or not row[k].strip()]
+            if missing:
+                raise ValueError("需要填写非空文本的字段为" + "、".join(missing))
             key,t,source,body = (row[k].strip() for k in REQUIRED)
-            t = stamp(t)
+            try:
+                t = stamp(t)
+            except ValueError:
+                raise ValueError("披露时间无效，请填写有效的 YYYY-MM-DD HH:MM 日期时间") from None
             fp = sha256(json.dumps([t,source,body],ensure_ascii=False).encode()).hexdigest()
             with db:
                 if not db.in_transaction:
@@ -34,5 +43,7 @@ def ingest(db, rows):
             counts["新增"]+=1
         except (ValueError, TypeError) as err:
             counts["失败"]+=1
-            errors.append(f"第{i}项：{err}")
+            doc = row.get("编号") if isinstance(row, dict) else None
+            label = f"（{doc.strip()}）" if isinstance(doc, str) and doc.strip() else ""
+            errors.append(f"第{i}项{label}：{err}")
     return counts,errors
