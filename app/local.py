@@ -33,9 +33,9 @@ def controls(token, cutoff, notice):
     secret = f'<input type="hidden" name="token" value="{token}">'
     return f"""
 <p role="status">{escape(notice)}</p>
-<form method="get"><label>按披露时间回看（本地时间）
+<section id="history"><h1>历史回看</h1><form method="get"><label>按披露时间回看（本地时间）
 <input type="datetime-local" name="until" value="{escape(cutoff.replace(" ","T"))}"></label>
-<button>查看该时点</button> <a href="/">查看全部</a></form>
+<button>查看该时点</button> <a href="/">查看全部</a></form></section><section id="imports"><h1>材料录入</h1>
 <details><summary>录入一份材料</summary><form method="post" action="/import">{secret}
 <label>材料编号 <input name="编号" required></label><label>披露时间 <input type="datetime-local" name="发布时间" required></label>
 <label>发布来源 <input name="来源" required></label><label>正文 <textarea rows="4" name="正文" required></textarea></label>
@@ -46,7 +46,12 @@ def controls(token, cutoff, notice):
 <form method="post" action="/review-example">{secret}<button>导入人工金额复核示例</button></form>
 <form method="post" action="/link-examples">{secret}<button>导入多合同归并示例</button></form>
 <form method="post" action="/evidence-examples">{secret}<button>导入澄清与金额更正示例</button></form>
-<form method="post" action="/stage-three">{secret}<button>导入第三阶段双类型示例</button></form></details>"""
+<form method="post" action="/stage-three">{secret}<button>导入第三阶段双类型示例</button></form></details></section>"""
+
+def brief_panel(rows, cutoff):
+    form = brief_form(rows, cutoff)
+    return '<section id="briefs"><h1>研究简报</h1>' + (form or "<p>导入包含公司名称的材料后可生成简报。</p>") + "</section>"
+
 
 def make_server(db_path, port=0):
     db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -77,8 +82,8 @@ def make_server(db_path, port=0):
                 return self.send_error(400, "Invalid date")
             with closing(sqlite3.connect(db_path)) as db:
                 rows = records(db, cutoff)
-            data = report(rows, cutoff, controls(token, cutoff, query.get("notice", [""])[0]) + brief_form(rows, cutoff),
-                          review_token=None if cutoff else token).encode()
+            data = report(rows, cutoff, controls(token, cutoff, query.get("notice", [""])[0]) + brief_panel(rows, cutoff),
+                          review_token=None if cutoff else token, interactive=True).encode()
             self.html_response(data)
 
         def show_brief(self, query):

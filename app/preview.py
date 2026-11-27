@@ -1,6 +1,7 @@
 from collections import Counter, defaultdict
 from html import escape
 from src.link.timeline import timelines
+from app.dashboard import dashboard
 
 STYLE = """
 :root{font-family:system-ui,sans-serif;color:#183347;background:#f4f6f7}
@@ -50,7 +51,7 @@ def amount_panel(row, token):
 def entry(row, source_spans, candidate_ids, token=None):
     esc = escape
     info = " · ".join(row[k] for k in ("发布时间","编号","来源","材料性质"))
-    parts = ["<article><small>" + esc(info) + "</small>"]
+    parts = [f'<article id="doc-{row["编号"].encode().hex()}"><small>' + esc(info) + "</small>"]
     if row["引述来源"]:
         parts.append("<p>文中引述 " + esc(row["引述来源"]) + "</p>")
     if row["待复核"]:
@@ -109,15 +110,15 @@ def entry(row, source_spans, candidate_ids, token=None):
     parts.append(esc(body[cursor:]) + "</p></details></article>")
     return "".join(parts)
 
-def report(rows, cutoff, controls="", review_token=None):
+def report(rows, cutoff, controls="", review_token=None, interactive=False):
     groups, pending = timelines(rows)
     tasks = [row for row in rows if "金额复核" in row]
     review_summary = f"{len(pending)} 份待复核"
     if tasks:
         remaining = sum(not row["金额复核"]["记录"] for row in tasks)
         review_summary = f"{len(pending)} 份归属待复核 · <a href='#amount-tasks'>{remaining} 条金额待处理</a>"
-    parts = ["<!doctype html><html lang='zh-CN'><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>上市公司事项追踪</title><style>"+STYLE+"</style><h1>上市公司事项追踪</h1>", controls,
-             f"<p>披露截至 {escape(cutoff or '库内最新')} · {len(rows)} 份材料 · {len(groups)} 组事项候选 · {review_summary}</p>"]
+    summary = f"<p>披露截至 {escape(cutoff or '库内最新')} · {len(rows)} 份材料 · {len(groups)} 组事项候选 · {review_summary}</p>"
+    parts = []
     source_spans = defaultdict(dict)
     candidate_ids = {}
     for row in rows:
@@ -179,4 +180,7 @@ def report(rows, cutoff, controls="", review_token=None):
         parts.append('<section id="review"><h2>待复核材料</h2>')
         parts.extend(entry(r, source_spans, candidate_ids, review_token) for r in pending)
         parts.append("</section>")
-    return "\n".join(parts)+"</html>"
+    if interactive:
+        return dashboard(rows, groups, pending, tasks, cutoff, controls, "\n".join(parts), summary)
+    prefix = ["<!doctype html><html lang='zh-CN'><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>上市公司事项追踪</title><style>"+STYLE+"</style><h1>上市公司事项追踪</h1>", controls, summary]
+    return "\n".join(prefix + parts)+"</html>"
