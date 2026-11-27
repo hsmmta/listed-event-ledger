@@ -21,6 +21,7 @@ out/*
 !out/V2.1-合同归并与复核.html
 !out/V2.2-二阶段定版验收.html
 !out/V3.0-合同澄清与更正.html
+!out/V3.1-合同与业绩核验.html
 .venv/
 *.tmp
 /docs/

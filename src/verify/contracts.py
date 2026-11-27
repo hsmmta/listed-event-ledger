@@ -40,6 +40,8 @@ def verify(rows):
     corrected = set()
     for row in rows:
         row["核验"] = []
+        if row.get("事件类型") == "业绩":
+            continue
         official = row["材料性质"] == "公告披露"
         published = row["发布时间"]
         correction = CORRECTION.fullmatch(row["正文"]) if official else None
@@ -71,7 +73,9 @@ def verify(rows):
             action, quote = claim["动作"], claim["原句"]
             ref = reference(row, claim)
             if action == "称已签约" and not official and re.search(r"已与|已签约", quote):
-                reports[matter].append(ref)
+                source = next((s for s in row["出处判断"] if s["本篇引句"] == ref), None)
+                if source and len(source["报道链"]) <= 1:
+                    reports[matter].append(ref)
             if official and action == "尚未签约" and re.search(r"截至(?:本公告披露时|目前|今日)", quote):
                 for earlier in reports[matter]:
                     if earlier["发布时间"] < published:

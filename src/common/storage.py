@@ -1,7 +1,9 @@
 from datetime import datetime
 import json
 
-from src.link.resolve import resolve
+from src.extract.earnings import extract_earnings
+from src.link.resolve import resolve, stable_id
+from src.verify.sources import trace
 from src.verify.contracts import verify
 from src.extract.contracts import SIGNING_TOPIC, extract
 
@@ -36,17 +38,18 @@ def link_document(db, document_id, result):
 
 def initialize(db):
     db.executescript(DDL)
-    if db.execute("PRAGMA user_version").fetchone()[0] >= 2:
+    if db.execute("PRAGMA user_version").fetchone()[0] >= 3:
         return
     with db:
         db.execute("BEGIN IMMEDIATE")
         version = db.execute("PRAGMA user_version").fetchone()[0]
-        if version >= 2:
+        if version >= 3:
             return
         rows = db.execute("SELECT id, source, body, result FROM documents ORDER BY published, id")
         for document_id, source, body, stored in rows:
-            if SIGNING_TOPIC.search(body):
-                result = extract(source, body)
+            earnings = extract_earnings(source, body)
+            if earnings or (version < 2 and SIGNING_TOPIC.search(body)):
+                result = earnings or extract(source, body)
                 db.execute("UPDATE documents SET result=? WHERE id=?",
                            (json.dumps(result, ensure_ascii=False), document_id))
                 db.execute("DELETE FROM document_matters WHERE document_id=?", (document_id,))
@@ -55,7 +58,7 @@ def initialize(db):
             else:
                 continue
             link_document(db, document_id, result)
-        db.execute("PRAGMA user_version = 2")
+        db.execute("PRAGMA user_version = 3")
 
 
 def records(db, until):
@@ -67,4 +70,9 @@ def records(db, until):
     rows = [{"编号": k, "发布时间": t, "来源": s, "正文": b, **json.loads(result),
              "事项编号": f"HT-{matter_id:04d}" if matter_id is not None else None}
             for k, t, s, b, result, matter_id in db.execute(query, (until or "9999",))]
-    return verify(resolve(rows))
+    resolve(rows)
+    for row in rows:
+        if row.get("事件类型") == "业绩" and not row["待复核"]:
+            row["事项编号"] = stable_id((row["公司"], row["报告期"]), "业绩", row["指标"])
+            row["归并依据"] = "按公告公司、报告期和指标归属"
+    return verify(trace(rows))

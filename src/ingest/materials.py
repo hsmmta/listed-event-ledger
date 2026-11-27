@@ -3,6 +3,7 @@ import json
 
 from src.common.storage import link_document, stamp
 from src.extract.contracts import extract
+from src.extract.earnings import extract_earnings
 
 REQUIRED = ("编号", "发布时间", "来源", "正文")
 
@@ -27,7 +28,7 @@ def ingest(db, rows):
                 if prior or db.execute("SELECT 1 FROM documents WHERE fingerprint=?",(fp,)).fetchone():
                     counts["重复"]+=1
                     continue
-                result=extract(source,body)
+                result = extract_earnings(source, body) or extract(source, body)
                 db.execute("INSERT INTO documents VALUES(?,?,?,?,?,?)",(key,t,source,body,fp,json.dumps(result,ensure_ascii=False)))
                 link_document(db, key, result)
             counts["新增"]+=1
