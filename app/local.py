@@ -19,6 +19,7 @@ DEFAULT_DB = ROOT / "data" / "interim" / "事件资料.sqlite3"
 
 EXAMPLES = {
     "/examples": ("D1-D5.json", "D6-D8.json"),
+    "/evidence-examples": ("E01-E05.json",),
     "/link-examples": ("B01-B08.json",),
 }
 
@@ -36,7 +37,8 @@ def controls(token, cutoff, notice):
 <button>导入并查看最新时间线</button></form></details>
 <details><summary>使用虚构样例</summary><form method="post" action="/examples">{secret}
 <button>导入八份公开示例</button></form>
-<form method="post" action="/link-examples">{secret}<button>导入多合同归并示例</button></form></details>"""
+<form method="post" action="/link-examples">{secret}<button>导入多合同归并示例</button></form>
+<form method="post" action="/evidence-examples">{secret}<button>导入澄清与金额更正示例</button></form></details>"""
 
 def make_server(db_path, port=0):
     db_path.parent.mkdir(parents=True, exist_ok=True)

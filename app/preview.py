@@ -38,6 +38,12 @@ def entry(row, source_spans, candidate_ids):
         anchor = quote_anchor(ref["材料"], ref["起点"], ref["终点"])
         label = " · ".join(ref[k] for k in ("材料", "来源", "发布时间"))
         parts.append(f'<p><a href="#{anchor}">{esc(label)}</a>　{esc(ref["引句"])}</p>')
+    for link in row["核验"]:
+        parts.append("<p><strong>" + esc(link["关系"]) + "</strong>　" + esc(link["说明"]) + "</p>")
+        for ref in link["依据"]:
+            anchor = quote_anchor(ref["材料"], ref["起点"], ref["终点"])
+            label = " · ".join(ref[k] for k in ("材料", "来源", "发布时间"))
+            parts.append(f'<p><a href="#{anchor}">{esc(label)}</a>　{esc(ref["引句"])}</p>')
     for claim in row["说法"]:
         parts.append("<strong>"+esc(claim["动作"])+"</strong><blockquote>"+esc(claim["原句"])+"</blockquote>")
         start, end = claim["起点"], claim["终点"]
