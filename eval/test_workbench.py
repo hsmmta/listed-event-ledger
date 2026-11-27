@@ -50,6 +50,17 @@ class WorkbenchTest(unittest.TestCase):
                         self.assertEqual(linked.count(f'id="{fragment}"'), 1, fragment)
                     cutoff = read("/?" + urlencode({"until": "2026-11-11T23:59"}))
                     self.assertNotIn("HT-02", cutoff)
+                    tasks = read("/review-example", {"token": token})
+                    self.assertIn("R01 · 待处理", tasks)
+                    form = dict(token=token, document="R01", revision=0, amount="608万元",
+                                reviewer="测试研究员", reason="草案金额与签约价同句")
+                    saved = read("/amount-review", form)
+                    self.assertIn("680万元 → 608万元", saved)
+                    self.assertIn("R01 · 已复核", saved)
+                    self.assertIn("记录已更新", read("/amount-review", form))
+                    historical = read("/?" + urlencode({"until": "2026-11-22T16:00"}))
+                    self.assertNotIn("测试研究员", historical)
+                    self.assertNotIn('action="/amount-review"', historical)
                 finally:
                     server.shutdown()
                     thread.join()
@@ -57,5 +68,8 @@ class WorkbenchTest(unittest.TestCase):
                 thread=Thread(target=reopened.handle_request)
                 thread.start()
                 with urlopen(f"http://127.0.0.1:{reopened.server_port}/",timeout=5) as response:
-                    self.assertIn("光纤改造",response.read().decode())
+                    restarted = response.read().decode()
+                    self.assertIn("光纤改造", restarted)
+                    self.assertIn("680万元 → 608万元", restarted)
+                    self.assertIn("测试研究员", restarted)
                 thread.join()

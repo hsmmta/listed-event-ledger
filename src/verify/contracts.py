@@ -91,6 +91,9 @@ def verify(rows):
                                                earlier[-1], ref))
                 number, _, issue = number_field(row)
                 amounts = AMOUNT.findall(quote)
+                review = row.get("金额复核")
+                if review and review["原句"] == quote:
+                    amounts = [(a["数值"], a["单位"]) for a in row["金额"]] if review["记录"] else []
                 if number and not issue and len(amounts) == 1:
                     key = (row["来源"], published[:10], number, "".join(amounts[0]))
                     originals[key].append((row, ref))

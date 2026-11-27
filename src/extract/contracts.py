@@ -2,6 +2,9 @@ import re
 
 SIGNING_TOPIC = re.compile(r"(?:签署|签订)(?:情况|事宜|进展)")
 
+AMOUNT_FIELD = re.compile(r"(合同金额|项目总投资|金额)(?:约为|为|约|达)?\s*([0-9.,]+)\s*(亿元|万元|元)")
+
+
 def extract(source, body):
     # 每个范围都来自原始字符串，方便定位；规则只覆盖合同语料。
     company = re.match(r"(.+公司)公告$", source)
@@ -40,7 +43,7 @@ def extract(source, body):
             actions = ["否认或更正（待核范围）"]
         for action in actions:
             claims.append({"动作":action, "原句":quote, "起点":sent.start(), "终点":sent.end()})
-    amounts = re.findall(r"(合同金额|项目总投资|金额)(?:约为|为|约|达)?\s*([0-9.,]+)\s*(亿元|万元|元)", body)
+    amounts = AMOUNT_FIELD.findall(body)
     reasons = []
     if not company or not project or not parties or len(set(parties)) != 1:
         reasons.append("主体、对手或项目待核")

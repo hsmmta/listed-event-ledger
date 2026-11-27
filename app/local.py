@@ -10,14 +10,15 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlencode, urlsplit
 
-from app.preview import report
+from app.preview import report, review_anchor
 from src.common.storage import initialize, records, stamp
 from src.ingest.materials import ingest
+from src.verify.amount_review import DEFAULT_DB, correct_amount
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_DB = ROOT / "data" / "interim" / "事件资料.sqlite3"
 
 EXAMPLES = {
+    "/review-example": ("R01-金额复核.json",),
     "/examples": ("D1-D5.json", "D6-D8.json"),
     "/stage-three": ("来源与业绩.json", "E01-E05.json"),
     "/evidence-examples": ("E01-E05.json",),
@@ -38,6 +39,7 @@ def controls(token, cutoff, notice):
 <button>导入并查看最新时间线</button></form></details>
 <details><summary>使用虚构样例</summary><form method="post" action="/examples">{secret}
 <button>导入八份公开示例</button></form>
+<form method="post" action="/review-example">{secret}<button>导入人工金额复核示例</button></form>
 <form method="post" action="/link-examples">{secret}<button>导入多合同归并示例</button></form>
 <form method="post" action="/evidence-examples">{secret}<button>导入澄清与金额更正示例</button></form>
 <form method="post" action="/stage-three">{secret}<button>导入第三阶段双类型示例</button></form></details>"""
@@ -69,7 +71,8 @@ def make_server(db_path, port=0):
                 return self.send_error(400, "Invalid date")
             with closing(sqlite3.connect(db_path)) as db:
                 rows = records(db, cutoff)
-            data = report(rows, cutoff, controls(token, cutoff, query.get("notice", [""])[0])).encode()
+            data = report(rows, cutoff, controls(token, cutoff, query.get("notice", [""])[0]),
+                          review_token=None if cutoff else token).encode()
             self.send_response(200)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(data)))
@@ -78,7 +81,7 @@ def make_server(db_path, port=0):
             self.wfile.write(data)
 
         def do_POST(self):
-            if self.path != "/import" and self.path not in EXAMPLES:
+            if self.path not in ("/import", "/amount-review") and self.path not in EXAMPLES:
                 return self.send_error(404)
             try:
                 size = int(self.headers.get("Content-Length","0"))
@@ -89,6 +92,20 @@ def make_server(db_path, port=0):
             form = parse_qs(self.rfile.read(size).decode("utf-8", "replace"))
             if form.get("token") != [token]:
                 return self.send_error(403)
+            if self.path == "/amount-review":
+                doc = form.get("document", [""])[0]
+                try:
+                    revision = int(form.get("revision", ["-1"])[0])
+                    with closing(sqlite3.connect(db_path)) as db:
+                        correct_amount(db, doc, revision, form.get("amount", [""])[0],
+                                       form.get("reviewer", [""])[0], form.get("reason", [""])[0])
+                    message = "已保存人工金额复核"
+                except ValueError as exc:
+                    message = f"未保存：{exc}"
+                    self.redirect(message)
+                    return
+                self.redirect(message, "#" + review_anchor(doc))
+                return
             if self.path in EXAMPLES:
                 rows = []
                 for name in EXAMPLES[self.path]:
@@ -100,8 +117,11 @@ def make_server(db_path, port=0):
             with closing(sqlite3.connect(db_path)) as db:
                 counts, errors = ingest(db, rows)
             msg = "，".join(f"{k} {v}" for k,v in counts.items())
+            self.redirect("；".join([msg, *errors]))
+
+        def redirect(self, message, fragment=""):
             self.send_response(303)
-            self.send_header("Location", "/?"+urlencode({"notice":"；".join([msg,*errors])}))
+            self.send_header("Location", "/?" + urlencode({"notice": message}) + fragment)
             self.end_headers()
 
     return HTTPServer(("127.0.0.1",port), Handler)

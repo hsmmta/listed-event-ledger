@@ -3,6 +3,7 @@ import json
 
 from src.extract.earnings import extract_earnings
 from src.link.resolve import resolve, stable_id
+from src.verify.amount_review import apply_reviews, initialize_reviews
 from src.verify.sources import trace
 from src.verify.contracts import verify
 from src.extract.contracts import SIGNING_TOPIC, extract
@@ -38,6 +39,7 @@ def link_document(db, document_id, result):
 
 def initialize(db):
     db.executescript(DDL)
+    initialize_reviews(db)
     if db.execute("PRAGMA user_version").fetchone()[0] >= 3:
         return
     with db:
@@ -75,4 +77,5 @@ def records(db, until):
         if row.get("事件类型") == "业绩" and not row["待复核"]:
             row["事项编号"] = stable_id((row["公司"], row["报告期"]), "业绩", row["指标"])
             row["归并依据"] = "按公告公司、报告期和指标归属"
+    apply_reviews(db, rows, until)
     return verify(trace(rows))
